@@ -1,0 +1,19 @@
+public class CasePermissionHelper {
+    public static Boolean isUserHasCaseAdminPermission() {
+        Set<String> permissionSetNames = new Set<String>{
+            'Case Admin' // Replace with the actual name of the Case Admin permission set
+        };
+
+        for (PermissionSetAssignment assignment : [
+            SELECT Id, PermissionSet.Name
+            FROM PermissionSetAssignment
+            WHERE AssigneeId = :UserInfo.getUserId() AND PermissionSet.Name IN :permissionSetNames
+        ]) {
+            if (assignment.PermissionSet.Name == 'Case Admin') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
