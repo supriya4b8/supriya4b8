@@ -1,0 +1,41 @@
+trigger CaseNonconformanceTrigger on Case (after insert, after update) {
+    List<SQX_Nonconformance__c> nonconformanceList = new List<SQX_Nonconformance__c>();
+    Set<Id> caseIds = new Set<Id>();
+
+    // Collect Case IDs with Type as Problem
+    for (Case caseRecord : Trigger.new) {
+        if (caseRecord.Type == 'Problem') {
+            caseIds.add(caseRecord.Id);
+        }
+    }
+
+    // Query existing Nonconformance records related to the Case IDs
+    Map<Id, SQX_Nonconformance__c> existingNonconformances = new Map<Id, SQX_Nonconformance__c>([
+        SELECT Id, Case__c
+        FROM SQX_Nonconformance__c
+        WHERE Case__c IN :caseIds
+    ]);
+
+    for (Case caseRecord : Trigger.new) {
+        if (caseRecord.Type == 'Problem') {
+            // Check if Nonconformance record already exists for the Case
+            if (!existingNonconformances.containsKey(caseRecord.Id)) {
+                // Check if the user has the Case Admin permission set
+                if (CasePermissionHelper.isUserHasCaseAdminPermission()) {
+                    SQX_Nonconformance__c nonconformance = new SQX_Nonconformance__c();
+                    nonconformance.Case__c = caseRecord.Id;
+                    nonconformance.Priority__c = caseRecord.Priority;
+                    nonconformance.Title__c = caseRecord.Subject;
+                    nonconformance.Description__c = caseRecord.Description;
+                    nonconformance.QMS_Reference_Number__c = caseRecord.CaseNumber;
+                    // Set any other required fields on the Nonconformance record
+                    nonconformanceList.add(nonconformance);
+                }
+            }
+        }
+    }
+
+    if (!nonconformanceList.isEmpty()) {
+        insert nonconformanceList;
+    }
+}
